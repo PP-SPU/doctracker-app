@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase'; // เปลี่ยนเป็น Supabase
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -15,16 +15,24 @@ export default function Reports() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState(currentYear.toString());
 
+  // ดึงข้อมูลจาก Supabase
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents'],
-    queryFn: () => base44.entities.Document.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
   });
 
   const availableYears = useMemo(() => {
     const years = new Set();
     documents.forEach(doc => {
-      if (doc.created_date) {
-        years.add(new Date(doc.created_date).getFullYear());
+      if (doc.created_at) { // เปลี่ยนเป็น created_at
+        years.add(new Date(doc.created_at).getFullYear());
       }
     });
     return Array.from(years).sort((a, b) => b - a);
@@ -39,8 +47,8 @@ export default function Reports() {
     }));
 
     documents.forEach(doc => {
-      if (!doc.created_date) return;
-      const date = new Date(doc.created_date);
+      if (!doc.created_at) return;
+      const date = new Date(doc.created_at);
       if (date.getFullYear() !== parseInt(selectedYear)) return;
       
       const monthIdx = date.getMonth();
@@ -57,8 +65,8 @@ export default function Reports() {
   const yearlyComparison = useMemo(() => {
     const yearData = {};
     documents.forEach(doc => {
-      if (!doc.created_date) return;
-      const year = new Date(doc.created_date).getFullYear();
+      if (!doc.created_at) return;
+      const year = new Date(doc.created_at).getFullYear();
       if (!yearData[year]) {
         yearData[year] = { year: year.toString(), budget: 0, count: 0 };
       }
@@ -70,8 +78,8 @@ export default function Reports() {
 
   const statusBreakdown = useMemo(() => {
     const filtered = documents.filter(doc => {
-      if (!doc.created_date) return false;
-      return new Date(doc.created_date).getFullYear() === parseInt(selectedYear);
+      if (!doc.created_at) return false;
+      return new Date(doc.created_at).getFullYear() === parseInt(selectedYear);
     });
 
     const counts = {};
@@ -87,8 +95,8 @@ export default function Reports() {
 
   const stats = useMemo(() => {
     const filtered = documents.filter(doc => {
-      if (!doc.created_date) return false;
-      return new Date(doc.created_date).getFullYear() === parseInt(selectedYear);
+      if (!doc.created_at) return false;
+      return new Date(doc.created_at).getFullYear() === parseInt(selectedYear);
     });
 
     return {

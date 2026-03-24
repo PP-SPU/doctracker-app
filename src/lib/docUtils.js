@@ -1,4 +1,4 @@
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase'; // 1. เปลี่ยนเป็น supabase
 
 export const STATUS_CONFIG = {
   DRAFT: { label: 'ร่าง', color: 'bg-gray-100 text-gray-700 border-gray-200', step: 0 },
@@ -27,8 +27,17 @@ export function generateDocNumber() {
   return `DOC-${y}${m}-${random}`;
 }
 
+// 2. แก้คำสั่งให้บันทึกลง Supabase
 export async function createLog(data) {
-  return base44.entities.ActivityLog.create(data);
+  try {
+    const { error } = await supabase
+      .from('activity_logs')
+      .insert([data]);
+
+    if (error) throw error;
+  } catch (error) {
+    console.error('Error creating activity log:', error);
+  }
 }
 
 export function isOverdue(doc) {
@@ -37,8 +46,9 @@ export function isOverdue(doc) {
 }
 
 export function isNewToday(doc) {
-  if (!doc.created_date) return false;
-  const created = new Date(doc.created_date);
+  // 3. เปลี่ยน created_date เป็น created_at
+  if (!doc.created_at) return false;
+  const created = new Date(doc.created_at);
   const today = new Date();
   return created.toDateString() === today.toDateString();
 }

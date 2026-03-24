@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase'; // เปลี่ยนเป็น Supabase
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import StatsCards from '@/components/dashboard/StatsCards';
 import BudgetChart from '@/components/dashboard/BudgetChart';
@@ -12,18 +12,37 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
-  const { data: documents = [], isLoading } = useQuery({
-    queryKey: ['documents'],
-    queryFn: () => base44.entities.Document.list('-created_date'),
-  });
-
   const queryClient = useQueryClient();
 
+  // ดึงข้อมูลจาก Supabase
+  const { data: documents = [], isLoading } = useQuery({
+    queryKey: ['documents'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // ระบบ Real-time สำหรับอัปเดต Dashboard
   useEffect(() => {
-    const unsubscribe = base44.entities.Document.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-    });
-    return unsubscribe;
+    const channel = supabase
+      .channel('public:documents_dashboard')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documents' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [queryClient]);
 
   const recentDocs = documents.slice(0, 5);

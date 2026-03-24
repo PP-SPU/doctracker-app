@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase'; // เปลี่ยนเป็น Supabase
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -28,16 +28,37 @@ export default function ActivityLogs() {
   const [actionFilter, setActionFilter] = useState('ALL');
   const queryClient = useQueryClient();
 
+  // ดึงข้อมูลจากตาราง activity_logs ใน Supabase
   const { data: logs = [], isLoading } = useQuery({
     queryKey: ['activityLogs'],
-    queryFn: () => base44.entities.ActivityLog.list('-created_date', 200),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      
+      if (error) throw error;
+      return data || [];
+    },
   });
 
+  // ระบบ Real-time แจ้งเตือนเมื่อมี Log ใหม่
   useEffect(() => {
-    const unsubscribe = base44.entities.ActivityLog.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
-    });
-    return unsubscribe;
+    const channel = supabase
+      .channel('public:activity_logs')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'activity_logs' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['activityLogs'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [queryClient]);
 
   const filtered = logs.filter(log => {
@@ -116,7 +137,8 @@ export default function ActivityLogs() {
                     </div>
                     <p className="text-sm mt-0.5">{log.action_detail}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                      <span>{formatDateTime(log.created_date)}</span>
+                      {/* เปลี่ยน created_date เป็น created_at */}
+                      <span>{formatDateTime(log.created_at)}</span>
                       {log.performed_by && <span>โดย: {log.performed_by}</span>}
                       {log.old_status && log.new_status && (
                         <span>{log.old_status} → {log.new_status}</span>

@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import DocumentForm from '@/components/documents/DocumentForm';
-import { generateDocNumber, createLog } from '@/lib/docUtils';
+import { generateDocNumber, createLog } from '@/lib/docUtils'; // นำกลับมาใช้แล้ว
 import { toast } from 'sonner';
 
 export default function DocumentCreate() {
@@ -13,54 +13,104 @@ export default function DocumentCreate() {
 
   const handleSave = async (formData) => {
     setIsSaving(true);
-    const docNumber = generateDocNumber();
-    const now = new Date().toISOString();
-    const doc = await base44.entities.Document.create({
-      ...formData,
-      doc_number: docNumber,
-      status: 'DRAFT',
-      status_history: [{ status: 'DRAFT', timestamp: now, by: formData.submitter_name }],
-    });
-    await createLog({
-      document_id: doc.id,
-      doc_number: docNumber,
-      action: 'CREATED',
-      action_detail: `สร้างเอกสาร "${formData.title}"`,
-      performed_by: formData.submitter_name,
-      new_status: 'DRAFT',
-    });
-    queryClient.invalidateQueries({ queryKey: ['documents'] });
-    toast.success('สร้างเอกสารสำเร็จ');
-    setIsSaving(false);
-    navigate(`/documents/${doc.id}`);
+    try {
+      const docNumber = generateDocNumber();
+      const documentData = {
+        title: formData.title,
+        description: formData.description,
+        submitter_name: formData.submitter_name,
+        reference_number: formData.reference_number,
+        budget: formData.budget,
+        contractor_name: formData.contractor_name,
+        notes: formData.notes,
+        priority: formData.priority || 'MEDIUM',
+        due_date: formData.due_date || null,
+        status: 'DRAFT',
+        doc_number: docNumber, // บันทึกเลขเอกสารลงฐานข้อมูล
+      };
+
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([documentData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // บันทึกประวัติการทำงาน (Log)
+      await createLog({
+        document_id: data.id,
+        doc_number: docNumber,
+        action: 'CREATED',
+        action_detail: `สร้างเอกสาร "${formData.title}"`,
+        performed_by: formData.submitter_name,
+        new_status: 'DRAFT',
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      toast.success('บันทึกร่างเอกสารสำเร็จ');
+      navigate(`/documents/${data.id}`);
+
+    } catch (error) {
+      console.error('Supabase Error:', error);
+      toast.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleSubmit = async (formData) => {
     setIsSaving(true);
-    const docNumber = generateDocNumber();
-    const now = new Date().toISOString();
-    const doc = await base44.entities.Document.create({
-      ...formData,
-      doc_number: docNumber,
-      status: 'SUBMITTED',
-      submit_date: new Date().toISOString().split('T')[0],
-      status_history: [
-        { status: 'DRAFT', timestamp: now, by: formData.submitter_name },
-        { status: 'SUBMITTED', timestamp: now, by: formData.submitter_name },
-      ],
-    });
-    await createLog({
-      document_id: doc.id,
-      doc_number: docNumber,
-      action: 'SUBMITTED',
-      action_detail: `สร้างและส่งเรื่อง "${formData.title}"`,
-      performed_by: formData.submitter_name,
-      new_status: 'SUBMITTED',
-    });
-    queryClient.invalidateQueries({ queryKey: ['documents'] });
-    toast.success('สร้างและส่งเรื่องสำเร็จ');
-    setIsSaving(false);
-    navigate(`/documents/${doc.id}`);
+    try {
+      const docNumber = generateDocNumber();
+      const now = new Date().toISOString();
+      const documentData = {
+        title: formData.title,
+        description: formData.description,
+        submitter_name: formData.submitter_name,
+        reference_number: formData.reference_number,
+        budget: formData.budget,
+        contractor_name: formData.contractor_name,
+        notes: formData.notes,
+        priority: formData.priority || 'MEDIUM',
+        due_date: formData.due_date || null,
+        status: 'SUBMITTED',
+        doc_number: docNumber,
+        submit_date: now.split('T')[0],
+        status_history: [
+          { status: 'DRAFT', timestamp: now, by: formData.submitter_name },
+          { status: 'SUBMITTED', timestamp: now, by: formData.submitter_name }
+        ]
+      };
+
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([documentData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // บันทึกประวัติการทำงาน (Log)
+      await createLog({
+        document_id: data.id,
+        doc_number: docNumber,
+        action: 'SUBMITTED',
+        action_detail: `สร้างและส่งเรื่อง "${formData.title}"`,
+        performed_by: formData.submitter_name,
+        new_status: 'SUBMITTED',
+      });
+
+      queryClient.invalidateQueries({ queryKey: ['documents'] });
+      toast.success('สร้างและส่งเรื่องสำเร็จ');
+      navigate(`/documents/${data.id}`);
+
+    } catch (error) {
+      console.error('Supabase Error:', error);
+      toast.error('เกิดข้อผิดพลาดในการส่งเรื่อง');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

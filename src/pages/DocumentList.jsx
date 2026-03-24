@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { base44 } from '@/api/base44Client';
+import { supabase } from '@/api/supabase'; // เปลี่ยนเป็น Supabase
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -19,33 +19,55 @@ export default function DocumentList() {
   
   const queryClient = useQueryClient();
 
+  // 1. ดึงข้อมูลจาก Supabase แทน Base44
   const { data: documents = [], isLoading } = useQuery({
     queryKey: ['documents'],
-    queryFn: () => base44.entities.Document.list('-created_date'),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('*')
+        .order('created_at', { ascending: false }); // เรียงจากเอกสารใหม่สุดไปเก่าสุด
+      
+      if (error) throw error;
+      return data;
+    },
   });
 
+  // 2. ระบบ Real-time อัปเดตข้อมูลอัตโนมัติเมื่อมีเอกสารใหม่
   useEffect(() => {
-    const unsubscribe = base44.entities.Document.subscribe(() => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] });
-    });
-    return unsubscribe;
+    const channel = supabase
+      .channel('public:documents')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'documents' },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [queryClient]);
 
   const filtered = documents.filter(doc => {
     const matchSearch = !search || 
       doc.title?.toLowerCase().includes(search.toLowerCase()) ||
-      doc.doc_number?.toLowerCase().includes(search.toLowerCase()) ||
+      doc.reference_number?.toLowerCase().includes(search.toLowerCase()) ||
       doc.submitter_name?.toLowerCase().includes(search.toLowerCase()) ||
-      doc.reference_number?.toLowerCase().includes(search.toLowerCase());
+      doc.contractor_name?.toLowerCase().includes(search.toLowerCase()); // เพิ่มให้ค้นหาชื่อบริษัทได้ด้วย
+      
     const matchStatus = statusFilter === 'ALL' || doc.status === statusFilter;
     const matchPriority = priorityFilter === 'ALL' || doc.priority === priorityFilter;
     
     let matchDate = true;
-    if (dateFrom && doc.created_date) {
-      matchDate = matchDate && new Date(doc.created_date) >= new Date(dateFrom);
+    // เปลี่ยนจาก created_date เป็น created_at ให้ตรงกับฐานข้อมูลใหม่
+    if (dateFrom && doc.created_at) {
+      matchDate = matchDate && new Date(doc.created_at) >= new Date(dateFrom);
     }
-    if (dateTo && doc.created_date) {
-      matchDate = matchDate && new Date(doc.created_date) <= new Date(dateTo);
+    if (dateTo && doc.created_at) {
+      matchDate = matchDate && new Date(doc.created_at) <= new Date(dateTo);
     }
     
     return matchSearch && matchStatus && matchPriority && matchDate;
@@ -70,7 +92,7 @@ export default function DocumentList() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="ค้นหา ชื่อเรื่อง, เลขกำกับ, ผู้รับเอกสาร, เลขที่เอกสาร..."
+              placeholder="ค้นหา ชื่อเรื่อง, เลขกำกับ, ผู้รับเอกสาร, ชื่อบริษัท..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9"

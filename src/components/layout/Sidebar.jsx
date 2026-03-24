@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // เพิ่ม useNavigate
+import { supabase } from '@/api/supabase'; // เพิ่ม supabase
 import { 
-  LayoutDashboard, FileText, Plus, History, X, ChevronLeft, BarChart3, Moon, Sun
-} from 'lucide-react';
+  LayoutDashboard, FileText, Plus, History, X, ChevronLeft, BarChart3, Moon, Sun, LogOut
+} from 'lucide-react'; // เพิ่ม LogOut icon
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner'; // เพิ่ม toast
 
 const navItems = [
   { path: '/', label: 'แดชบอร์ด', icon: LayoutDashboard },
@@ -16,6 +18,7 @@ const navItems = [
 
 export default function Sidebar({ open, onClose }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const [darkMode, setDarkMode] = useState(false);
 
   useEffect(() => {
@@ -26,6 +29,17 @@ export default function Sidebar({ open, onClose }) {
   const toggleDarkMode = () => {
     document.documentElement.classList.toggle('dark');
     setDarkMode(!darkMode);
+  };
+
+  // ฟังก์ชันออกจากระบบ
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error('เกิดข้อผิดพลาด: ' + error.message);
+    } else {
+      toast.success('ออกจากระบบเรียบร้อยแล้ว');
+      // ระบบจะดีดไปหน้า /login อัตโนมัติจากเงื่อนไขใน App.jsx
+    }
   };
 
   return (
@@ -75,7 +89,7 @@ export default function Sidebar({ open, onClose }) {
           })}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border space-y-3">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
           <Button
             variant="ghost"
             size="sm"
@@ -85,7 +99,19 @@ export default function Sidebar({ open, onClose }) {
             {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />}
             {darkMode ? 'โหมดสว่าง' : 'โหมดมืด'}
           </Button>
-          <p className="text-[10px] text-sidebar-foreground/40 text-center">
+
+          {/* ปุ่มออกจากระบบ */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className="w-full justify-start text-red-400 hover:text-red-500 hover:bg-red-500/10"
+          >
+            <LogOut className="w-4 h-4 mr-2" />
+            ออกจากระบบ
+          </Button>
+
+          <p className="text-[10px] text-sidebar-foreground/40 text-center pt-2">
             DocTracker v1.0
           </p>
         </div>

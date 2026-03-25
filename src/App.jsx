@@ -16,13 +16,13 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. เช็ค Session ครั้งแรก
+    // 1. ตรวจสอบ Session ทันทีที่เปิดแอป
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
 
-    // 2. ติดตามสถานะการเปลี่ยนล็อกอิน (Login/Logout)
+    // 2. คอยเฝ้าดูการเปลี่ยนสถานะ (เช่น กด Logout หรือ Login สำเร็จ)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
@@ -30,18 +30,21 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  if (loading) return null; // หรือใส่ Loading Spinner สวยๆ
+  // ระหว่างที่รอเช็คสถานะ ให้โชว์หน้าว่างๆ ไปก่อน (ป้องกันหน้ากระพริบ)
+  if (loading) return null;
 
   return (
     <BrowserRouter>
       <Routes>
-        {/* หน้า Login แบบเดี่ยวๆ (Public Route) */}
+        {/* --- ส่วนที่ 1: หน้าที่ "ไม่ต้อง" ล็อกอิน (Public) --- */}
+        {/* ถ้าล็อกอินแล้ว ดันทะลึ่งจะเข้าหน้า Login อีก ให้ดีดกลับไปหน้าแรกทันที */}
         <Route 
           path="/login" 
           element={!session ? <Login /> : <Navigate to="/" replace />} 
         />
 
-        {/* หน้าที่ต้องล็อกอินก่อน (Protected Routes) */}
+        {/* --- ส่วนที่ 2: หน้าที่ "ต้อง" ล็อกอิน (Private) --- */}
+        {/* ถ้ายังไม่ล็อกอิน แล้วพยายามจะเข้าหน้าข้างใน ให้ดีดไปหน้า Login ทันที */}
         <Route 
           element={session ? <Layout /> : <Navigate to="/login" replace />}
         >
@@ -54,7 +57,7 @@ export default function App() {
           <Route path="/logs" element={<ActivityLogs />} />
         </Route>
 
-        {/* ถ้าไปหน้าอื่นที่ไม่มีจริง ให้เด้งกลับหน้าแรก */}
+        {/* ถ้าพิมพ์ URL มั่วๆ ให้ดีดกลับไปหน้าแรก */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

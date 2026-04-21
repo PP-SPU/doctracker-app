@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { formatBudget } from '@/lib/docUtils';
 
 const MONTH_NAMES = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
 
@@ -8,25 +9,38 @@ export default function BudgetChart({ documents }) {
   const data = useMemo(() => {
     const monthMap = {};
     const now = new Date();
+
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      monthMap[key] = { month: MONTH_NAMES[d.getMonth()], budget: 0, count: 0 };
+
+      monthMap[key] = {
+        key,
+        month: MONTH_NAMES[d.getMonth()],
+        budget: 0,
+        count: 0,
+      };
     }
-    documents.forEach(doc => {
-      if (!doc.created_date) return;
-      const d = new Date(doc.created_date);
+
+    documents.forEach((doc) => {
+      if (!doc.created_at) return;
+
+      const d = new Date(doc.created_at);
+      if (Number.isNaN(d.getTime())) return;
+
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
       if (monthMap[key]) {
-        monthMap[key].budget += doc.budget || 0;
+        monthMap[key].budget += Number(doc.budget || 0);
         monthMap[key].count += 1;
       }
     });
+
     return Object.values(monthMap);
   }, [documents]);
 
   const formatTooltip = (value) => {
-    return new Intl.NumberFormat('th-TH').format(value) + ' บาท';
+    return [`฿${formatBudget(value)}`, 'งบประมาณ'];
   };
 
   return (
@@ -39,9 +53,21 @@ export default function BudgetChart({ documents }) {
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-            <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+            <YAxis
+              tick={{ fontSize: 11 }}
+              tickFormatter={(v) => {
+              if (v >= 1000000) return `${(v / 1000000).toFixed(1)} ลบ.`;
+              if (v >= 1000) return `${(v / 1000).toFixed(0)}k`;
+              return v;
+              }}
+            />
             <Tooltip formatter={formatTooltip} />
-            <Bar dataKey="budget" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} name="งบประมาณ" />
+            <Bar
+              dataKey="budget"
+              fill="hsl(var(--primary))"
+              radius={[4, 4, 0, 0]}
+              name="งบประมาณ"
+            />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

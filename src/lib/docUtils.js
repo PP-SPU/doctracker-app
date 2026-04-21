@@ -1,30 +1,28 @@
 import { supabase } from '@/api/supabase'; // 1. เปลี่ยนเป็น supabase
 
 export const STATUS_CONFIG = {
-  DRAFT: { label: 'ร่าง', color: 'bg-gray-100 text-gray-700 border-gray-200', step: 0 },
-  SUBMITTED: { label: 'ส่งเรื่องแล้ว', color: 'bg-blue-50 text-blue-700 border-blue-200', step: 1 },
-  SECRETARY_REVIEW: { label: 'เลขานุการตรวจสอบ', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', step: 2 },
-  DIRECTOR_REVIEW: { label: 'ผอ. พิจารณา', color: 'bg-purple-50 text-purple-700 border-purple-200', step: 3 },
-  PRESIDENT_REVIEW: { label: 'อธิการพิจารณา', color: 'bg-amber-50 text-amber-700 border-amber-200', step: 4 },
-  APPROVED: { label: 'อนุมัติแล้ว', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', step: 5 },
-  IN_PROGRESS: { label: 'กำลังดำเนินการ', color: 'bg-teal-50 text-teal-700 border-teal-200', step: 6 },
-  CLOSED: { label: 'ปิดงาน', color: 'bg-green-50 text-green-800 border-green-200', step: 7 },
-  RETURNED: { label: 'ตีกลับ', color: 'bg-red-50 text-red-700 border-red-200', step: -1 },
+  DRAFT: { label: 'ร่าง', color: 'bg-slate-100 text-slate-700 border-slate-300', step: 0 },
+  SUBMITTED: { label: 'ส่งเรื่องแล้ว', color: 'bg-blue-100 text-blue-800 border-blue-300', step: 1 },
+  SECRETARY_REVIEW: { label: 'เลขานุการตรวจสอบ', color: 'bg-indigo-100 text-indigo-800 border-indigo-300', step: 2 },
+  DIRECTOR_REVIEW: { label: 'ผอ. พิจารณา', color: 'bg-violet-100 text-violet-800 border-violet-300', step: 3 },
+  PRESIDENT_REVIEW: { label: 'อธิการพิจารณา', color: 'bg-amber-100 text-amber-900 border-amber-300', step: 4 },
+  APPROVED: { label: 'อนุมัติแล้ว', color: 'bg-emerald-100 text-emerald-800 border-emerald-300', step: 5 },
+  IN_PROGRESS: { label: 'กำลังดำเนินการ', color: 'bg-cyan-100 text-cyan-800 border-cyan-300', step: 6 },
+  CLOSED: { label: 'ปิดงาน', color: 'bg-green-100 text-green-800 border-green-300', step: 7 },
+  RETURNED: { label: 'ตีกลับ', color: 'bg-rose-100 text-rose-800 border-rose-300', step: -1 },
 };
 
 export const PRIORITY_CONFIG = {
-  LOW: { label: 'ต่ำ', color: 'bg-gray-100 text-gray-600' },
-  MEDIUM: { label: 'ปานกลาง', color: 'bg-blue-100 text-blue-700' },
-  HIGH: { label: 'สูง', color: 'bg-orange-100 text-orange-700' },
-  URGENT: { label: 'เร่งด่วน', color: 'bg-red-100 text-red-700' },
+  LOW: { label: 'ต่ำ', color: 'bg-slate-200 text-slate-800 border border-slate-300' },
+  MEDIUM: { label: 'ปานกลาง', color: 'bg-blue-200 text-blue-900 border border-blue-300' },
+  HIGH: { label: 'สูง', color: 'bg-orange-200 text-orange-900 border border-orange-300' },
+  URGENT: { label: 'เร่งด่วน', color: 'bg-red-600 text-white border border-red-700' },
 };
 
+// Deprecated: ให้ Supabase สร้าง doc_number ผ่าน trigger แทน
 export function generateDocNumber() {
-  const now = new Date();
-  const y = now.getFullYear() + 543; // Buddhist year
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const random = String(Math.floor(Math.random() * 9999)).padStart(4, '0');
-  return `DOC-${y}${m}-${random}`;
+  console.warn('generateDocNumber() is deprecated. Use Supabase trigger instead.');
+  return '';
 }
 
 // 2. แก้คำสั่งให้บันทึกลง Supabase
@@ -54,12 +52,12 @@ export function isNewToday(doc) {
 }
 
 export function formatBudget(amount) {
-  if (!amount && amount !== 0) return '-';
+  if (amount === null || amount === undefined || amount === '') return '-';
+
   return new Intl.NumberFormat('th-TH', {
-    style: 'currency',
-    currency: 'THB',
-    minimumFractionDigits: 0,
-  }).format(amount);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(amount));
 }
 
 export function formatDate(date) {

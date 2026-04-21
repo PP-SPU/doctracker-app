@@ -143,9 +143,9 @@ export default function DocumentDetail() {
               </div>
               <h1 className="text-xl font-bold font-heading">{doc.title}</h1>
             </div>
-            <p className="text-xl font-bold text-primary">{formatBudget(doc.budget)}</p>
-          </div>
-          {doc.return_reason && doc.status === 'RETURNED' && (
+              <p className="text-xl font-bold text-primary">
+                {doc.budget ? `฿${formatBudget(doc.budget)}` : '-'}
+              </p>            </div>{doc.return_reason && doc.status === 'RETURNED' && (
             <div className="p-3 rounded-lg bg-red-50 border border-red-200 mb-4">
               <p className="text-sm font-medium text-red-700">เหตุผลที่ตีกลับ:</p>
               <p className="text-sm text-red-600">{doc.return_reason}</p>

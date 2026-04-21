@@ -70,6 +70,7 @@ export default function DocumentForm({ initialData, onSave, onSubmit, isSaving }
             <Label>งบประมาณ (บาท)</Label>
             <Input
               type="number"
+              step="0.01"
               value={form.budget}
               onChange={e => handleChange('budget', e.target.value)}
               placeholder="0.00"

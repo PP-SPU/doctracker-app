@@ -33,7 +33,7 @@ export default function DocumentCard({ doc }) {
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-xs text-muted-foreground font-mono flex items-center gap-1">
                   <Hash className="w-3 h-3" />
-                  {doc.reference_number || doc.doc_number || '-'}
+                  {doc.doc_number || doc.reference_number || '-'}
                 </span>
 
                 <StatusBadge status={doc.status} />

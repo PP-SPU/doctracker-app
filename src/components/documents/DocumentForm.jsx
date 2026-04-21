@@ -4,7 +4,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Save, Send, Loader2 } from 'lucide-react';
 
 export default function DocumentForm({ initialData, onSave, onSubmit, isSaving }) {
@@ -37,6 +36,7 @@ export default function DocumentForm({ initialData, onSave, onSubmit, isSaving }
           {initialData?.id ? 'แก้ไขเอกสาร' : 'สร้างเอกสารใหม่'}
         </CardTitle>
       </CardHeader>
+
       <CardContent className="space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2 space-y-1.5">
@@ -87,15 +87,17 @@ export default function DocumentForm({ initialData, onSave, onSubmit, isSaving }
 
           <div className="space-y-1.5">
             <Label>ระดับความสำคัญ</Label>
-            <Select value={form.priority} onValueChange={v => handleChange('priority', v)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="LOW">ต่ำ</SelectItem>
-                <SelectItem value="MEDIUM">ปานกลาง</SelectItem>
-                <SelectItem value="HIGH">สูง</SelectItem>
-                <SelectItem value="URGENT">เร่งด่วน</SelectItem>
-              </SelectContent>
-            </Select>
+            <select
+              value={form.priority || ''}
+              onChange={(e) => handleChange('priority', e.target.value)}
+              className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+            >
+              <option value="">เลือกความสำคัญ</option>
+              <option value="LOW">ต่ำ</option>
+              <option value="MEDIUM">ปานกลาง</option>
+              <option value="HIGH">สูง</option>
+              <option value="URGENT">เร่งด่วน</option>
+            </select>
           </div>
 
           <div className="space-y-1.5">
@@ -138,6 +140,7 @@ export default function DocumentForm({ initialData, onSave, onSubmit, isSaving }
             {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
             บันทึกร่าง
           </Button>
+
           <Button
             onClick={() => onSubmit(prepareData())}
             disabled={!form.title || !form.submitter_name || isSaving}
